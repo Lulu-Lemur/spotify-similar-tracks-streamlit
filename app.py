@@ -85,8 +85,8 @@ def get_artist_track_ids(artist_id, limit=300):
 def audio_features_for_ids(ids):
     """曲 ID リストから音響特徴をまとめて取得"""
     feats = []
-    for i in range(0, len(ids), 50):
-        batch = [x for x in ids[i:i+50] if x]
+    for i in range(0, len(ids), 20):
+        batch = [x for x in ids[i:i+20] if x]
         if not batch: continue
         try:
             res = sp.audio_features(batch)
