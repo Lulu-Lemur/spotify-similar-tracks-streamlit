@@ -2,7 +2,7 @@ import streamlit as st,spotipy,numpy as np,pandas as pd
 from spotipy.oauth2 import SpotifyClientCredentials
 
 st.set_page_config(page_title="SimilarTracks",page_icon=":musical_note:")
-st.title("AAA/BBBに似たBBの曲を探す（Spotify）")
+st.title("類似した曲を他のアーティストから探す")
 
 if "SPOTIFY_CLIENT_ID" not in st.secrets or "SPOTIFY_CLIENT_SECRET" not in st.secrets:
     st.error("Deploy前に Streamlit Secrets に SPOTIFY_CLIENT_ID と SPOTIFY_CLIENT_SECRET を設定してください。"); st.stop()
@@ -54,8 +54,8 @@ def audio_features_for_ids(ids):
             feats.extend(sp.audio_features(batch))
     return feats
 
-track_a=st.text_input("Input your favorit music（曲名 or Spotify URL）")
-track_b=st.text_input("Input your favorit music（曲名 or Spotify URL）")
+track_a=st.text_input("Input your favorit music A（曲名 or Spotify URL）")
+track_b=st.text_input("Input your favorit music B（曲名 or Spotify URL）")
 artist_bb=st.text_input("Input your favorit artist（名前 or Spotify URL）")
 topk=st.number_input("返す件数",min_value=1,max_value=50,value=10)
 
