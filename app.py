@@ -47,11 +47,17 @@ def get_artist_track_ids(artist_id,limit=300):
     return ids
 
 def audio_features_for_ids(ids):
-    feats=[]
-    for i in range(0,len(ids),50):
+    feats = []
+    for i in range(0, len(ids), 50):
         batch = [x for x in ids[i:i+50] if x]  # None除去
-        if batch:
-            feats.extend(sp.audio_features(batch))
+        if not batch:
+            continue
+        try:
+            res = sp.audio_features(batch)
+            # None が返る場合もあるのでフィルタ
+            feats.extend([f for f in res if f])
+        except spotipy.SpotifyException as e:
+            st.warning(f"Audio features fetch failed for batch {batch[:5]}...: {e}")
     return feats
 
 track_a=st.text_input("Input your favorit music A（曲名 or Spotify URL）")
