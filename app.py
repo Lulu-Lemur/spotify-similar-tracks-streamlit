@@ -49,13 +49,14 @@ def get_artist_track_ids(artist_id,limit=300):
 def audio_features_for_ids(ids):
     feats=[]
     for i in range(0,len(ids),50):
-        batch=[x[0] if isinstance(x,tuple) else x for x in ids[i:i+50]]
-        feats.extend(sp.audio_features(batch))
+        batch = [x for x in ids[i:i+50] if x]  # None除去
+        if batch:
+            feats.extend(sp.audio_features(batch))
     return feats
 
-track_a=st.text_input("Aさんの曲 AAA（曲名 or Spotify URL）")
-track_b=st.text_input("Aさんの曲 BBB（曲名 or Spotify URL）")
-artist_bb=st.text_input("あなたが好きなアーティスト BB（名前 or Spotify URL）")
+track_a=st.text_input("Input your favorit music（曲名 or Spotify URL）")
+track_b=st.text_input("Input your favorit music（曲名 or Spotify URL）")
+artist_bb=st.text_input("Input your favorit artist（名前 or Spotify URL）")
 topk=st.number_input("返す件数",min_value=1,max_value=50,value=10)
 
 if st.button("おすすめを探す"):
@@ -73,7 +74,9 @@ if st.button("おすすめを探す"):
         meta_batches=[]
         for i in range(0,len(ids),50):
             meta_batches.extend(sp.tracks(ids[i:i+50])["tracks"])
-        feats=audio_features_for_ids(ids_meta)
+        # feats=audio_features_for_ids(ids_meta)
+        track_ids = [t[0] for t in ids_meta if t[0]]  # タプルからIDだけ抽出、None除去
+        feats = audio_features_for_ids(track_ids)
         df=pd.DataFrame([{"id":m["id"],"name":m["name"],"artists":", ".join([a["name"] for a in m["artists"]]),"album":m["album"]["name"]} for m in meta_batches])
         feat_keys=['danceability','energy','valence','tempo','acousticness','instrumentalness','liveness']
         feat_rows=[{k:f[k] for k in feat_keys} for f in feats if f]
