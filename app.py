@@ -27,11 +27,15 @@ except spotipy.SpotifyException as e:
 # ユーティリティ関数
 # ----------------------
 def extract_id(s):
-    """Spotify URL または URI から ID を抽出"""
+    """Spotify URL/URI から ID を抽出"""
     if not s: return None
-    s = s.strip()
-    if "open.spotify.com" in s: return s.split("/")[-1].split("?")[0]
-    if s.startswith("spotify:"): return s.split(":")[-1]
+    s = s.strip().rstrip("/")
+    if "open.spotify.com" in s:
+        parts = s.split("/")
+        if len(parts) >= 5:
+            return parts[4].split("?")[0]
+    if s.startswith("spotify:"):
+        return s.split(":")[-1]
     return None
 
 def get_track_id(q):
@@ -60,8 +64,8 @@ def get_artist_id(q):
 
 def get_artist_track_ids(artist_id, limit=300):
     """アーティストの曲を取得（ID, 曲名, アーティスト名, アルバム名）"""
-    ids = []       # push 用のリスト
-    seen = set()   # 重複防止用
+    ids = []
+    seen = set()
     offset = 0
     while True:
         try:
@@ -72,7 +76,6 @@ def get_artist_track_ids(artist_id, limit=300):
                 tracks = sp.album_tracks(album["id"]).get("items", [])
                 for t in tracks:
                     if t["id"] not in seen:
-                        # push のイメージ：append でリストに追加
                         ids.append((t["id"], t["name"], ", ".join([ar["name"] for ar in t["artists"]]), album["name"]))
                         seen.add(t["id"])
                         if len(ids) >= limit: return ids
@@ -90,14 +93,12 @@ def audio_features_for_ids(ids):
         if not batch: continue
         try:
             res = sp.audio_features(batch)
-            # None の場合はゼロ埋め
-            feats.extend([f if f else {"id": batch[j], "danceability":0,"energy":0,"valence":0,"tempo":0,
-                                       "acousticness":0,"instrumentalness":0,"liveness":0} for j,f in enumerate(res)])
+            feats.extend([f if f else {"id": batch[j], "danceability":np.nan,"energy":np.nan,"valence":np.nan,"tempo":np.nan,
+                                       "acousticness":np.nan,"instrumentalness":np.nan,"liveness":np.nan} for j,f in enumerate(res)])
         except spotipy.SpotifyException as e:
             st.warning(f"Audio features fetch failed for batch {batch[:5]}...: {e}")
-            # push: batch の曲をゼロ埋めで追加
-            feats.extend([{"id":x,"danceability":0,"energy":0,"valence":0,"tempo":0,
-                           "acousticness":0,"instrumentalness":0,"liveness":0} for x in batch])
+            feats.extend([{"id":x,"danceability":np.nan,"energy":np.nan,"valence":np.nan,"tempo":np.nan,
+                           "acousticness":np.nan,"instrumentalness":np.nan,"liveness":np.nan} for x in batch])
     return feats
 
 # ----------------------
@@ -133,7 +134,6 @@ if st.button("おすすめを探す"):
         meta_batches = []
         for i in range(0, len(ids), 50):
             try:
-                # push: append を使ってリストに追加
                 meta_batches.extend(sp.tracks(ids[i:i+50])["tracks"])
             except spotipy.SpotifyException as e:
                 st.warning(f"Track metadata fetch failed for batch {ids[i:i+5]}...: {e}")
@@ -155,7 +155,8 @@ if st.button("おすすめを探す"):
 
         # ターゲット曲の特徴
         t_feats = audio_features_for_ids([ida, idb])
-        if not t_feats or any(f is None for f in t_feats):
+        t_feats = [f for f in t_feats if f]  # None を除外
+        if not t_feats:
             st.error("入力曲の音響特徴が取得できません")
             st.stop()
 
@@ -179,8 +180,5 @@ if st.button("おすすめを探す"):
         for _, r in df.iterrows():
             st.markdown(f"**{r['name']}** — {r['artists']} — _{r['album']}_ (類似度: {r['sim']:.3f})")
             st.markdown(f"https://open.spotify.com/track/{r['id']}")
-            try:
-                preview = sp.track(r['id']).get("preview_url")
-                if preview: st.audio(preview)
-            except spotipy.SpotifyException:
-                pass
+            preview = r.get("preview_url")
+            if preview: st.audio(preview)
